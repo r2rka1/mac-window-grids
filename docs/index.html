@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Window Grids: saved window layouts for macOS</title><meta name="description" content="A macOS menu bar window organizer: snap windows into saved grid layouts and switch between them with a hotkey.">
+<meta property="og:title" content="Window Grids: saved window layouts for macOS"><meta property="og:description" content="A macOS menu bar window organizer: snap windows into saved grid layouts and switch between them with a hotkey."><meta property="og:image" content="https://r2rka1.github.io/mac-window-grids/icon.png">
+<link rel="icon" href="icon.png"><style>
+:root{--bg:#120d2b;--bg2:#1c1542;--card:#231a52;--line:#3a2c7a;--ink:#f4f1ff;--mute:#b9aee6;--violet:#8b5cf6;--lav:#c4b5fd;--mint:#34d399}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+background-image:linear-gradient(var(--bg2) 1px,transparent 1px),linear-gradient(90deg,var(--bg2) 1px,transparent 1px);background-size:32px 32px}
+a{color:var(--lav)}.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+nav{display:flex;align-items:center;gap:12px;padding:18px 0;font-weight:700}
+nav img{width:36px;height:36px}nav span{flex:1}nav a{font-weight:500;text-decoration:none;margin-left:14px;font-size:15px}
+.hero{text-align:center;padding:48px 0 28px}
+.hero img.icon{width:148px;height:148px;filter:drop-shadow(0 16px 30px rgba(0,0,0,.5))}
+h1{font-size:clamp(34px,6vw,58px);line-height:1.08;margin:18px 0 12px;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.hero p{color:var(--mute);font-size:20px;max-width:640px;margin:0 auto 26px;text-wrap:pretty}
+.btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-block;padding:12px 20px;border-radius:10px;font-weight:700;text-decoration:none;border:2px solid var(--violet);color:var(--ink);box-shadow:4px 4px 0 #0008}
+.btn.primary{background:var(--violet)}.btn.soon{border-style:dashed;color:var(--mute);box-shadow:none}
+.shots{display:flex;gap:20px;justify-content:center;align-items:flex-start;flex-wrap:wrap;margin:36px 0}
+.shots img{max-width:100%;height:auto;border-radius:12px;box-shadow:0 20px 50px #000a}
+h2{font-size:28px;margin:56px 0 18px;letter-spacing:-.01em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.card{background:var(--card);border:2px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:5px 5px 0 #0006}
+.card h3{margin:0 0 6px;font-size:18px;color:var(--lav)}.card p{margin:0;color:var(--mute);font-size:16px}
+pre{background:#0b0820;border:2px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:14px/1.5 ui-monospace,Menlo,monospace;color:var(--mint)}
+code{font:14px ui-monospace,Menlo,monospace;background:#0b0820;padding:2px 6px;border-radius:5px}
+.prose{max-width:720px}.prose p,.prose li{color:var(--mute)}.prose strong{color:var(--ink)}
+footer{margin:64px 0 0;padding:26px 0 40px;border-top:2px solid var(--line);color:var(--mute);font-size:15px;display:flex;gap:16px;flex-wrap:wrap}
+footer span{flex:1}
+</style></head><body><div class="wrap">
+<nav><img src="icon.png" alt=""><span>Window Grids</span><a href="./">Home</a><a href="privacy.html">Privacy</a><a href="https://github.com/r2rka1/mac-window-grids">GitHub</a></nav>
+<section class="hero"><img class="icon" src="icon.png" alt="Window Grids icon: a violet pixel-art octopus">
+<h1>Snap windows into grids. Switch layouts in one keystroke.</h1><p>A small macOS menu bar app that arranges app windows on a grid, remembers which app goes in which cell, and swaps whole arrangements with a hotkey.</p>
+<div class="btns"><span class="btn soon">Mac App Store: coming soon</span><a class="btn primary" href="https://github.com/r2rka1/mac-window-grids#build-and-install">Build from source</a></div></section>
+<div class="shots"><img src="editor.png" width="640" alt="Layout editor"><img src="overlay.png" width="640" alt="Grid overlay shown while dragging a window"></div>
+<h2>What it does</h2><div class="grid"><div class="card"><h3>Flexible grids</h3><p>Every column has its own width and its own number of rows: a half next to three rows, a wide main area with a narrow stack, or a plain 3 × 2.</p></div><div class="card"><h3>Drag apps into cells</h3><p>Drop running apps onto cells in the editor, or drag a tile to move it.</p></div><div class="card"><h3>Shift-drag any window</h3><p>Hold Shift while dragging a window and the grid appears. Drop on a cell and it snaps. Add Control to span several cells.</p></div><div class="card"><h3>Saved layouts</h3><p>Each layout remembers its grid and its apps. Make one for coding, one for writing, one for calls.</p></div><div class="card"><h3>Instant switching</h3><p>⌃⌥1 … ⌃⌥9 moves every app to its cell and launches the ones that are not running.</p></div><div class="card"><h3>Capture</h3><p>Snap everything currently on screen to the nearest cells and store it as a layout.</p></div></div>
+<h2>Permissions</h2><div class="prose"><p>macOS requires <strong>Accessibility</strong> access for any app that moves other apps' windows. Window Grids asks for it on first launch (System Settings → Privacy &amp; Security → Accessibility) and uses it only to read and set window positions and sizes.</p></div>
+<h2 id="support">Support</h2><div class="prose"><p>Questions, bugs and ideas go to the <a href="https://github.com/r2rka1/mac-window-grids/issues">issue tracker on GitHub</a>. The app is free and open source under the MIT license; requires macOS 14 or later.</p></div>
+<footer><span>© 2026 Arthur Artsabliuk · MIT License</span><a href="privacy.html">Privacy</a><a href="https://github.com/r2rka1/mac-window-grids/issues">Support</a><a href="https://github.com/r2rka1/mac-window-grids">Source</a></footer>
+</div></body></html>

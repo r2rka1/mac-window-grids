@@ -80,29 +80,46 @@ enum Mascot {
 
     /// Draws a macOS-style app icon (rounded square with margin) into a square canvas.
     static func drawIcon(_ kind: IconKind, in canvas: CGRect) {
-        let box = canvas.insetBy(dx: canvas.width * 0.11, dy: canvas.width * 0.11)
+        let box = canvas.insetBy(dx: canvas.width * 0.1, dy: canvas.width * 0.1)
         let u = box.width / 20  // the icon is composed on a 20×20 pixel grid
         func unit(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGRect {
             CGRect(x: box.minX + x * u, y: box.maxY - (y + h) * u, width: w * u, height: h * u)
         }
+        let shape = NSBezierPath(roundedRect: box, xRadius: box.width * 0.225, yRadius: box.width * 0.225)
         NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(roundedRect: box, xRadius: box.width * 0.225, yRadius: box.width * 0.225).addClip()
+        shape.addClip()
+        NSGradient(starting: rgb(0x3A2788), ending: rgb(0x120D2B))?.draw(in: box, angle: -90)
+        // A soft glow so the octopus stands off the background.
+        NSGradient(starting: rgb(0xA78BFA, 0.45), ending: rgb(0xA78BFA, 0))?
+            .draw(in: NSBezierPath(rect: box), relativeCenterPosition: NSPoint(x: 0, y: 0.15))
         switch kind {
         case .grids:
-            NSGradient(starting: rgb(0x2A2360), ending: rgb(0x14112E))?.draw(in: box, angle: -90)
             // A "half + three rows" layout behind the octopus.
-            rgb(0xA78BFA, 0.22).setFill()
-            unit(1, 1, 8.5, 18).fill()
-            for i in 0..<3 { unit(10.5, 1 + CGFloat(i) * 6.25, 8.5, 5.5).fill() }
-            draw(in: unit(2, 2, 16, 16))
+            for r in [unit(1.5, 1.5, 8, 17)] + (0..<3).map({ unit(10.5, 1.5 + CGFloat($0) * 5.83, 8, 5.33) }) {
+                rgb(0xC4B5FD, 0.16).setFill()
+                r.fill()
+                rgb(0xC4B5FD, 0.5).setFill()
+                r.frame(withWidth: u * 0.25)
+            }
         case .tracker:
-            NSGradient(starting: rgb(0x241F3D), ending: rgb(0x100E1C))?.draw(in: box, angle: -90)
             // A little activity chart along the bottom.
-            let heights: [CGFloat] = [1, 2, 1, 1, 3, 2, 1, 2, 4, 3, 1, 1, 2, 3, 2, 1, 2, 1, 3, 2]
-            rgb(0x34D399).setFill()
-            for (i, h) in heights.enumerated() { unit(CGFloat(i), 20 - h, 1, h).fill() }
-            draw(in: unit(2.5, 1, 15, 15))
+            let heights: [CGFloat] = [2, 3, 2, 1, 4, 3, 2, 3, 6, 4, 2, 2, 3, 5, 3, 2, 3, 2, 4, 3]
+            for (i, h) in heights.enumerated() {
+                rgb(0x34D399, 0.35).setFill()
+                unit(CGFloat(i), 20 - h - 1, 1, 1).fill()
+                rgb(0x34D399).setFill()
+                unit(CGFloat(i), 20 - h, 1, h).fill()
+            }
         }
+        let body = kind == .grids ? unit(3.5, 4, 13, 13) : unit(2.5, 0.5, 15, 15)
+        draw(in: body)
+        NSGraphicsContext.restoreGraphicsState()
+        // Rim light.
+        NSGraphicsContext.saveGraphicsState()
+        shape.addClip()
+        rgb(0xFFFFFF, 0.16).setStroke()
+        shape.lineWidth = u * 0.35
+        shape.stroke()
         NSGraphicsContext.restoreGraphicsState()
     }
 

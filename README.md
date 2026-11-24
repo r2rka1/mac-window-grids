@@ -8,6 +8,8 @@ A small macOS menu bar app that arranges app windows on a grid, remembers which 
   <img src="docs/editor.png" width="520" alt="Layout editor">
 </p>
 
+**[Website](https://r2rka1.github.io/mac-window-grids/)** · [Privacy](https://r2rka1.github.io/mac-window-grids/privacy.html)
+
 ## How it works
 
 - **Layouts**: a layout is a named grid plus the apps placed in its cells. Make as many as you like in the editor (menu bar icon → *Edit Layouts…*).
@@ -35,6 +37,14 @@ On first launch macOS asks for **Accessibility** access (System Settings → Pri
 
 macOS ties that permission to the code signature. The build script signs with an Apple Development or Developer ID certificate if one is in the keychain, so the permission survives rebuilds. Without one it signs ad-hoc and the permission has to be granted again after each build.
 
+## Mac App Store edition
+
+```sh
+./scripts/build-appstore.sh --local   # sandboxed build, to try on this Mac
+```
+
+The listing text, screenshots and submission steps are in [appstore/](appstore/README.md).
+
 ## Notes
 
 - Windows that enforce a minimum or fixed size will not shrink to a small cell.
@@ -47,6 +57,7 @@ macOS ties that permission to the code signature. The build script signs with an
 WindowGrids --selftest                 # check the grid maths
 WindowGrids --render editor.png        # render the editor with example data
 WindowGrids --render-overlay grid.png  # render the drag overlay with example data
+WindowGrids --render-store dir         # App Store screenshots, example data
 ```
 
 The octopus is pixel art defined in `Sources/WindowGrids/Mascot.swift`; `./scripts/make-icon.sh` regenerates the app icon from it.

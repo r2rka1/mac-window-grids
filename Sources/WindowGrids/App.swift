@@ -126,6 +126,8 @@ enum Main {
             exit(ok ? 0 : 1)
         } else if let i = args.firstIndex(of: "--icon"), i + 1 < args.count {
             Mascot.writeIcon(.grids, to: args[i + 1])
+        } else if let i = args.firstIndex(of: "--render-store"), i + 1 < args.count {
+            Render.store(into: args[i + 1])
         } else if let i = args.firstIndex(of: "--render"), i + 1 < args.count {
             Render.editor(to: args[i + 1], dark: args.contains("--dark"))
         } else if let i = args.firstIndex(of: "--render-overlay"), i + 1 < args.count {

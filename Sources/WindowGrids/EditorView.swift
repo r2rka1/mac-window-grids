@@ -36,10 +36,10 @@ struct EditorView: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 8) {
                 Image(nsImage: Mascot.image(size: 32)).interpolation(.none)
-                Text("Window Grids").font(.headline)
+                Text("Window Grids").font(.system(size: 15, weight: .bold, design: .rounded))
             }
             .padding(.bottom, 8)
-            Text("LAYOUTS").font(.caption.bold()).foregroundStyle(.secondary).padding(.bottom, 4)
+            Text("LAYOUTS").font(.caption.bold()).foregroundStyle(Mascot.tint).padding(.bottom, 4)
             ForEach(Array(store.layouts.enumerated()), id: \.element.id) { i, l in
                 HStack(spacing: 6) {
                     Image(systemName: l.id == store.active?.id ? "checkmark.circle.fill" : "circle")
@@ -73,6 +73,7 @@ struct EditorView: View {
             AppPalette(demoApps: demoApps)
         }
         .padding(10)
+        .background(Mascot.tint.opacity(0.07))
     }
 }
 
@@ -104,6 +105,7 @@ private struct LayoutDetail: View {
                 Spacer()
                 Button(index < 9 ? "Apply  ⌃⌥\(index + 1)" : "Apply") { controller.apply(layout) }
                     .keyboardShortcut(.defaultAction)
+                    .buttonStyle(.borderedProminent)
             }
 
             GridPreview(layout: $layout)
@@ -170,7 +172,7 @@ private struct LayoutDetail: View {
         return HStack(alignment: .top, spacing: 6) {
             ForEach(layout.columns.indices, id: \.self) { i in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Column \(i + 1)").font(.caption.bold()).foregroundStyle(.secondary)
+                    Text("Column \(i + 1)").font(.caption.bold()).foregroundStyle(Mascot.tint)
                     Stepper("Rows: \(layout.columns[i].rows)", value: $layout.columns[i].rows, in: 1...Layout.maxRows)
                     Stepper(
                         "Width: \(Int((layout.columns[i].weight / total * 100).rounded()))%",
@@ -217,7 +219,13 @@ private struct GridPreview: View {
         GeometryReader { g in
             let bounds = CGRect(origin: .zero, size: g.size)
             ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06))
+                // The "screen": a dark violet desktop the cells sit on.
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(nsColor: Mascot.rgb(0x3A2788)), Color(nsColor: Mascot.rgb(0x16102F))],
+                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.black.opacity(0.35), lineWidth: 1))
                 ForEach(layout.cells, id: \.self) { cell in
                     let r = rect(CellRange(cell), in: bounds)
                     DropCell { items in drop(items, on: CellRange(cell)) }
@@ -243,7 +251,7 @@ private struct GridPreview: View {
                 ForEach(layout.cells, id: \.self) { cell in
                     let r = rect(CellRange(cell), in: bounds)
                     RoundedRectangle(cornerRadius: 5)
-                        .strokeBorder(Color.primary.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .strokeBorder(Color.white.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                         .frame(width: r.width, height: r.height)
                         .offset(x: r.minX, y: r.minY)
                         .allowsHitTesting(false)
@@ -299,8 +307,8 @@ private struct AppTile: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 5)
-            .fill(color.opacity(0.28))
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(color.opacity(0.9), lineWidth: 1.5))
+            .fill(color.opacity(0.5))
+            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(color, lineWidth: 1.5))
             .overlay(
                 VStack(spacing: 4) {
                     ForEach(apps) { a in
@@ -309,11 +317,12 @@ private struct AppTile: View {
                                 Image(nsImage: icon).resizable().frame(width: 20, height: 20)
                             }
                             Text(a.appName + (a.screen > 0 ? "  (display \(a.screen + 1))" : ""))
-                                .font(.system(size: 12, weight: .medium)).lineLimit(1)
+                                .font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                                .foregroundStyle(.white)
                             Button {
                                 remove(a.id)
                             } label: {
-                                Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                                Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.7))
                             }
                             .buttonStyle(.plain)
                             .help("Remove from this layout")
@@ -328,7 +337,7 @@ private struct AppTile: View {
 
     private var color: Color {
         let h = apps.first.map { abs($0.bundleID.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) % 360 }) } ?? 200
-        return Color(hue: Double(h) / 360, saturation: 0.65, brightness: 0.8)
+        return Color(hue: Double(h) / 360, saturation: 0.6, brightness: 0.85)
     }
 
 }
@@ -369,11 +378,11 @@ private struct DropCell: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: 5)
-            .fill(targeted ? Mascot.tint.opacity(0.3) : Color.primary.opacity(0.001))
+            .fill(targeted ? Color.white.opacity(0.25) : Color.white.opacity(0.06))
             .overlay(
                 RoundedRectangle(cornerRadius: 5)
                     .strokeBorder(
-                        targeted ? Mascot.tint : Color.primary.opacity(0.25),
+                        targeted ? Color.white : Color.white.opacity(0.3),
                         style: StrokeStyle(lineWidth: targeted ? 2 : 1, dash: targeted ? [] : [4, 3]))
             )
             .dropDestination(for: String.self) { items, _ in onDrop(items) } isTargeted: { targeted = $0 }
@@ -394,7 +403,7 @@ private struct AppPalette: View {
     var body: some View {
         let center = NSWorkspace.shared.notificationCenter
         VStack(alignment: .leading, spacing: 2) {
-            Text("APPS").font(.caption.bold()).foregroundStyle(.secondary)
+            Text("APPS").font(.caption.bold()).foregroundStyle(Mascot.tint)
             Text("Drag into a cell").font(.caption).foregroundStyle(.secondary).padding(.bottom, 4)
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
