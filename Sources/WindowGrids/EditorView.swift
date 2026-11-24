@@ -229,9 +229,24 @@ private struct GridPreview: View {
                     AppTile(apps: group.items) { id in
                         layout.assignments.removeAll { $0.id == id }
                     }
-                    .dropDestination(for: String.self) { items, _ in drop(items, on: group.range) }
+                    // A drop on a tile goes to the single cell under the cursor, not the
+                    // tile's whole range, so a tile spanning several cells can be split.
+                    .dropDestination(for: String.self) { items, location in
+                        let p = CGPoint(x: r.minX + location.x, y: bounds.height - (r.minY + location.y))
+                        return drop(items, on: CellRange(Geometry.cell(at: p, in: layout, frame: bounds)))
+                    }
                     .frame(width: r.width, height: r.height)
                     .offset(x: r.minX, y: r.minY)
+                }
+                // Cell outlines again, above the tiles, so the grid stays visible under a
+                // tile that spans several cells.
+                ForEach(layout.cells, id: \.self) { cell in
+                    let r = rect(CellRange(cell), in: bounds)
+                    RoundedRectangle(cornerRadius: 5)
+                        .strokeBorder(Color.primary.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .frame(width: r.width, height: r.height)
+                        .offset(x: r.minX, y: r.minY)
+                        .allowsHitTesting(false)
                 }
             }
         }
