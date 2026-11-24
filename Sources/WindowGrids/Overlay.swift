@@ -5,37 +5,35 @@ final class OverlayView: NSView {
     var layout: Layout?
     var screenIndex = 0
     var gap: CGFloat = 6
-    var selection: CellSpan? { didSet { if selection != oldValue { needsDisplay = true } } }
+    var selection: CellRange? { didSet { if selection != oldValue { needsDisplay = true } } }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let layout else { return }
         NSColor.black.withAlphaComponent(0.18).setFill()
         bounds.fill()
 
-        func rect(_ s: CellSpan) -> CGRect {
-            Geometry.rect(span: s, cols: layout.cols, rows: layout.rows, in: bounds, gap: gap)
+        func rect(_ r: CellRange) -> CGRect {
+            Geometry.rect(r, in: layout, frame: bounds, gap: gap)
         }
-        for c in 0..<layout.cols {
-            for r in 0..<layout.rows {
-                let path = NSBezierPath(roundedRect: rect(CellSpan(col: c, row: r)), xRadius: 8, yRadius: 8)
-                NSColor.white.withAlphaComponent(0.10).setFill()
-                path.fill()
-                NSColor.white.withAlphaComponent(0.75).setStroke()
-                path.lineWidth = 1.5
-                path.stroke()
-            }
+        for cell in layout.cells {
+            let path = NSBezierPath(roundedRect: rect(CellRange(cell)), xRadius: 8, yRadius: 8)
+            NSColor.white.withAlphaComponent(0.10).setFill()
+            path.fill()
+            NSColor.white.withAlphaComponent(0.75).setStroke()
+            path.lineWidth = 1.5
+            path.stroke()
         }
 
         let attrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 15, weight: .semibold),
             .foregroundColor: NSColor.white,
         ]
-        var labels: [CellSpan: [String]] = [:]
+        var labels: [CellRange: [String]] = [:]
         for a in layout.assignments where a.screen == screenIndex {
-            labels[a.span, default: []].append(a.appName)
+            labels[a.range, default: []].append(a.appName)
         }
-        for (span, names) in labels {
-            let r = rect(span)
+        for (range, names) in labels {
+            let r = rect(range)
             let outline = NSBezierPath(roundedRect: r.insetBy(dx: 5, dy: 5), xRadius: 6, yRadius: 6)
             NSColor.white.withAlphaComponent(0.5).setStroke()
             outline.setLineDash([6, 4], count: 2, phase: 0)
@@ -53,24 +51,26 @@ final class OverlayView: NSView {
 
         if let selection {
             let path = NSBezierPath(roundedRect: rect(selection), xRadius: 8, yRadius: 8)
-            NSColor.controlAccentColor.withAlphaComponent(0.45).setFill()
+            Mascot.violet.withAlphaComponent(0.5).setFill()
             path.fill()
-            NSColor.controlAccentColor.setStroke()
+            Mascot.rgb(0xC4B5FD).setStroke()
             path.lineWidth = 3
             path.stroke()
         }
 
         let title = NSAttributedString(
-            string: "\(layout.name)  ·  \(layout.cols)×\(layout.rows)",
+            string: layout.name,
             attributes: [
                 .font: NSFont.systemFont(ofSize: 12, weight: .medium),
                 .foregroundColor: NSColor.white.withAlphaComponent(0.9),
             ])
         let ts = title.size()
-        let tr = CGRect(x: bounds.midX - ts.width / 2 - 8, y: bounds.maxY - ts.height - 14, width: ts.width + 16, height: ts.height + 6)
+        let tr = CGRect(
+            x: bounds.midX - (ts.width + 22) / 2 - 8, y: bounds.maxY - 36, width: ts.width + 22 + 16, height: 24)
         NSColor.black.withAlphaComponent(0.6).setFill()
         NSBezierPath(roundedRect: tr, xRadius: 6, yRadius: 6).fill()
-        title.draw(at: CGPoint(x: tr.minX + 8, y: tr.minY + 3))
+        Mascot.draw(in: CGRect(x: tr.minX + 8, y: tr.minY + 4, width: 16, height: 16))
+        title.draw(at: CGPoint(x: tr.minX + 30, y: tr.midY - ts.height / 2))
     }
 }
 

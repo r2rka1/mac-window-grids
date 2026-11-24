@@ -13,8 +13,8 @@ final class DragController {
     private var candidate: (window: AXUIElement, app: NSRunningApplication, first: CGRect)?
     private var confirmed = false
     private var lastCheck = Date.distantPast
-    private var anchor: (screen: Int, col: Int, row: Int)?
-    private var selection: (screen: Int, span: CellSpan)?
+    private var anchor: (screen: Int, cell: Cell)?
+    private var selection: (screen: Int, range: CellRange)?
     private var overlays: [OverlayWindow] = []
 
     init(store: Store, engine: LayoutEngine) {
@@ -82,13 +82,12 @@ final class DragController {
         let p = NSEvent.mouseLocation
         let screens = NSScreen.screens
         guard let si = screens.firstIndex(where: { NSMouseInRect(p, $0.frame, false) }) else { return }
-        let cell = Geometry.cell(at: p, cols: layout.cols, rows: layout.rows, in: screens[si].visibleFrame)
-        if !extend || anchor == nil || anchor?.screen != si { anchor = (si, cell.col, cell.row) }
-        let a = anchor!
-        selection = (si, Geometry.span(from: (a.col, a.row), to: cell))
+        let cell = Geometry.cell(at: p, in: layout, frame: screens[si].visibleFrame)
+        if !extend || anchor == nil || anchor?.screen != si { anchor = (si, cell) }
+        selection = (si, CellRange(anchor!.cell, cell))
         showOverlay(layout: layout)
         for (i, o) in overlays.enumerated() {
-            o.overlay.selection = i == si ? selection?.span : nil
+            o.overlay.selection = i == si ? selection?.range : nil
         }
     }
 
@@ -96,7 +95,7 @@ final class DragController {
         defer { reset() }
         guard confirmed, !overlays.isEmpty, NSEvent.modifierFlags.contains(.shift),
             let sel = selection, let c = candidate, let layout = store.active,
-            let target = engine.targetRect(span: sel.span, screen: sel.screen, in: layout)
+            let target = engine.targetRect(range: sel.range, screen: sel.screen, in: layout)
         else { return }
         let window = c.window
         let pid = c.app.processIdentifier
@@ -107,13 +106,13 @@ final class DragController {
                 AX.withoutEnhancedUI(pid: pid) { AX.setFrame(window, target) }
             }
         }
-        remember(app: c.app, window: window, span: sel.span, screen: sel.screen, in: layout)
+        remember(app: c.app, window: window, range: sel.range, screen: sel.screen, in: layout)
     }
 
     /// Records the drop in the active layout. If the app already has as many cells as
     /// it has windows, this is a move: drop the cell none of its other windows occupy.
     private func remember(
-        app: NSRunningApplication, window: AXUIElement, span: CellSpan, screen: Int, in layout: Layout
+        app: NSRunningApplication, window: AXUIElement, range: CellRange, screen: Int, in layout: Layout
     ) {
         guard let bundleID = app.bundleIdentifier else { return }
         let all = AX.windows(pid: app.processIdentifier)
@@ -122,15 +121,15 @@ final class DragController {
             let mine = l.assignments.filter { $0.bundleID == bundleID }
             if mine.count >= max(all.count, 1) {
                 let free = mine.first { a in
-                    guard let r = engine.targetRect(span: a.span, screen: a.screen, in: l) else { return true }
+                    guard let r = engine.targetRect(range: a.range, screen: a.screen, in: l) else { return true }
                     return !others.contains { Geometry.distance($0, r) < 40 }
                 }
                 if let drop = free ?? mine.first { l.assignments.removeAll { $0.id == drop.id } }
             }
-            l.assignments.removeAll { $0.bundleID == bundleID && $0.span == span && $0.screen == screen }
+            l.assignments.removeAll { $0.bundleID == bundleID && $0.range == range && $0.screen == screen }
             l.assignments.append(
                 Assignment(
-                    bundleID: bundleID, appName: app.localizedName ?? bundleID, span: span, screen: screen))
+                    bundleID: bundleID, appName: app.localizedName ?? bundleID, range: range, screen: screen))
         }
     }
 

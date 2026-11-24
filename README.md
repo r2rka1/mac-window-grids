@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="96" align="right" alt="Window Grids icon: a violet pixel-art octopus">
+
 # Window Grids
 
 A small macOS menu bar app that arranges app windows on a grid, remembers which app goes in which cell, and switches between saved arrangements with a hotkey.
@@ -8,7 +10,8 @@ A small macOS menu bar app that arranges app windows on a grid, remembers which 
 
 ## How it works
 
-- **Layouts**: a layout is a named grid (columns × rows) plus the apps placed in its cells. Make as many as you like in the editor (menu bar icon → *Edit Layouts…*).
+- **Layouts**: a layout is a named grid plus the apps placed in its cells. Make as many as you like in the editor (menu bar icon → *Edit Layouts…*).
+- **Flexible grids**: a grid is a row of columns, and every column has its own width and its own number of rows. One half-width column next to a column of three rows, a wide main area with a narrow stack beside it, or a plain 3 × 2 are all the same thing with different numbers. The *Preset* menu has the common ones.
 - **Drag a window into the grid**: hold **⇧ Shift** while dragging any window. The grid of the active layout appears; drop on a cell and the window snaps to it. The app is remembered in that cell. Add **⌃ Control** while dragging to stretch the window over several cells.
 - **Switch layouts**: **⌃⌥1 … ⌃⌥9** or the menu bar menu. Every app in the layout moves to its cells; apps that are not running are launched. Optionally, apps not in the layout are hidden.
 - **Capture**: *Capture current windows* snaps every visible window to its nearest cells and stores the result in the layout.
@@ -44,6 +47,8 @@ WindowGrids --selftest                 # check the grid maths
 WindowGrids --render editor.png        # render the editor with example data
 WindowGrids --render-overlay grid.png  # render the drag overlay with example data
 ```
+
+The octopus is pixel art defined in `Sources/WindowGrids/Mascot.swift`; `./scripts/make-icon.sh` regenerates the app icon from it.
 
 ## License
 

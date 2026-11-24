@@ -12,7 +12,8 @@ BIN="$(swift build -c release --show-bin-path)/WindowGrids"
 APP="build/WindowGrids.app"
 
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 cp "$BIN" "$APP/Contents/MacOS/WindowGrids"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 

@@ -16,10 +16,9 @@ final class LayoutEngine {
     }
 
     /// Target rect of an assignment in Accessibility coordinates.
-    func targetRect(span: CellSpan, screen index: Int, in layout: Layout) -> CGRect? {
+    func targetRect(range: CellRange, screen index: Int, in layout: Layout) -> CGRect? {
         guard let frame = screen(index)?.visibleFrame else { return nil }
-        let r = Geometry.rect(
-            span: span, cols: layout.cols, rows: layout.rows, in: frame, gap: store.settings.gap)
+        let r = Geometry.rect(range, in: layout, frame: frame, gap: store.settings.gap)
         return Geometry.flip(r, primaryHeight: primaryHeight)
     }
 
@@ -93,7 +92,7 @@ final class LayoutEngine {
         AX.withoutEnhancedUI(pid: pid) {
             for a in list {
                 guard !windows.isEmpty,
-                    let target = targetRect(span: a.span, screen: a.screen, in: layout)
+                    let target = targetRect(range: a.range, screen: a.screen, in: layout)
                 else { break }
                 let i = windows.indices.min {
                     Geometry.distance(windows[$0].1, target) < Geometry.distance(windows[$1].1, target)
@@ -145,11 +144,10 @@ final class LayoutEngine {
                 let r = Geometry.flip(f, primaryHeight: primaryHeight)
                 let centre = CGPoint(x: r.midX, y: r.midY)
                 let si = screens.firstIndex { $0.frame.contains(centre) } ?? 0
-                let span = Geometry.nearestSpan(
-                    for: r, cols: layout.cols, rows: layout.rows, in: screens[si].visibleFrame)
+                let range = Geometry.nearestRange(for: r, in: layout, frame: screens[si].visibleFrame)
                 list.append(
                     Assignment(
-                        bundleID: bundleID, appName: app.localizedName ?? bundleID, span: span,
+                        bundleID: bundleID, appName: app.localizedName ?? bundleID, range: range,
                         screen: si))
             }
         }

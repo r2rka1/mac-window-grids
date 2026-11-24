@@ -60,12 +60,15 @@ struct WindowGridsApp: App {
     @ObservedObject private var store = AppController.shared.store
 
     var body: some Scene {
-        MenuBarExtra("Window Grids", systemImage: "rectangle.split.2x2") {
+        MenuBarExtra {
             MenuContent().environmentObject(controller).environmentObject(store)
+        } label: {
+            Image(nsImage: Mascot.image(size: 16, template: true))
         }
 
         Window("Window Grids", id: "editor") {
             EditorView().environmentObject(controller).environmentObject(store)
+                .tint(Mascot.tint)
         }
         .defaultSize(width: 820, height: 600)
     }
@@ -121,6 +124,8 @@ enum Main {
             let ok = Geometry.selfTest()
             print(ok ? "selftest ok" : "selftest FAILED")
             exit(ok ? 0 : 1)
+        } else if let i = args.firstIndex(of: "--icon"), i + 1 < args.count {
+            Mascot.writeIcon(.grids, to: args[i + 1])
         } else if let i = args.firstIndex(of: "--render"), i + 1 < args.count {
             Render.editor(to: args[i + 1], dark: args.contains("--dark"))
         } else if let i = args.firstIndex(of: "--render-overlay"), i + 1 < args.count {

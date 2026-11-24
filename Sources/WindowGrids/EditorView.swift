@@ -18,7 +18,7 @@ struct EditorView: View {
             if let id = currentID, let index = store.layouts.firstIndex(where: { $0.id == id }) {
                 LayoutDetail(
                     layout: Binding(
-                        get: { store.layout(id) ?? Layout(name: "", cols: 1, rows: 1) },
+                        get: { store.layout(id) ?? Layout(name: "", rows: [1]) },
                         set: { store.replace($0) }),
                     index: index)
             } else {
@@ -31,11 +31,16 @@ struct EditorView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Image(nsImage: Mascot.image(size: 32)).interpolation(.none)
+                Text("Window Grids").font(.headline)
+            }
+            .padding(.bottom, 8)
             Text("LAYOUTS").font(.caption.bold()).foregroundStyle(.secondary).padding(.bottom, 4)
             ForEach(Array(store.layouts.enumerated()), id: \.element.id) { i, l in
                 HStack(spacing: 6) {
                     Image(systemName: l.id == store.active?.id ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(l.id == store.active?.id ? Color.accentColor : .secondary)
+                        .foregroundStyle(l.id == store.active?.id ? Mascot.tint : .secondary)
                     Text(l.name).lineLimit(1)
                     Spacer()
                     if i < 9 { Text("⌃⌥\(i + 1)").font(.caption).foregroundStyle(.secondary) }
@@ -43,7 +48,7 @@ struct EditorView: View {
                 .padding(.vertical, 5).padding(.horizontal, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(l.id == currentID ? Color.accentColor.opacity(0.18) : .clear)
+                        .fill(l.id == currentID ? Mascot.tint.opacity(0.2) : .clear)
                 )
                 .contentShape(Rectangle())
                 .onTapGesture { selected = l.id }
@@ -84,8 +89,13 @@ private struct LayoutDetail: View {
 
             HStack(spacing: 14) {
                 TextField("Name", text: $layout.name).textFieldStyle(.roundedBorder).frame(width: 180)
-                Stepper("Columns: \(layout.cols)", value: $layout.cols, in: 1...8)
-                Stepper("Rows: \(layout.rows)", value: $layout.rows, in: 1...6)
+                Stepper("Columns: \(layout.columns.count)", value: columnCount, in: 1...Layout.maxColumns)
+                Menu("Preset") {
+                    ForEach(Self.presets, id: \.name) { p in
+                        Button(p.name) { layout.columns = p.columns }
+                    }
+                }
+                .fixedSize()
                 Spacer()
                 Button(index < 9 ? "Apply  ⌃⌥\(index + 1)" : "Apply") { controller.apply(layout) }
                     .keyboardShortcut(.defaultAction)
@@ -94,6 +104,8 @@ private struct LayoutDetail: View {
             GridPreview(layout: $layout)
                 .aspectRatio(screenAspect, contentMode: .fit)
                 .frame(maxWidth: .infinity)
+
+            columnControls
 
             Text(
                 "Hold ⇧ Shift while dragging any window to drop it into a cell of the active layout. "
@@ -134,6 +146,48 @@ private struct LayoutDetail: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
+    /// Adding appends a single-row column; removing drops the last one.
+    private var columnCount: Binding<Int> {
+        Binding(
+            get: { layout.columns.count },
+            set: { n in
+                var cols = layout.columns
+                while cols.count < n { cols.append(Column()) }
+                if cols.count > n { cols.removeLast(cols.count - n) }
+                layout.columns = cols
+            })
+    }
+
+    /// One block per column, laid out under the column it controls.
+    private var columnControls: some View {
+        let total = layout.columns.reduce(0) { $0 + $1.weight }
+        return HStack(alignment: .top, spacing: 6) {
+            ForEach(layout.columns.indices, id: \.self) { i in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Column \(i + 1)").font(.caption.bold()).foregroundStyle(.secondary)
+                    Stepper("Rows: \(layout.columns[i].rows)", value: $layout.columns[i].rows, in: 1...Layout.maxRows)
+                    Stepper(
+                        "Width: \(Int((layout.columns[i].weight / total * 100).rounded()))%",
+                        value: $layout.columns[i].weight, in: 0.25...4, step: 0.25)
+                }
+                .font(.callout)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private static let presets: [(name: String, columns: [Column])] = [
+        ("Halves", [Column(), Column()]),
+        ("Half + 2 rows", [Column(), Column(rows: 2)]),
+        ("Half + 3 rows", [Column(), Column(rows: 3)]),
+        ("Wide main + 3 rows", [Column(weight: 2), Column(rows: 3)]),
+        ("Thirds", [Column(), Column(), Column()]),
+        ("Narrow · wide · narrow", [Column(), Column(weight: 2), Column()]),
+        ("2 × 2", [Column(rows: 2), Column(rows: 2)]),
+        ("3 × 2", [Column(rows: 2), Column(rows: 2), Column(rows: 2)]),
+    ]
+
     private var permissionBanner: some View {
         HStack {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.yellow)
@@ -158,16 +212,15 @@ private struct GridPreview: View {
             let bounds = CGRect(origin: .zero, size: g.size)
             ZStack(alignment: .topLeading) {
                 RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06))
-                ForEach(0..<(layout.cols * layout.rows), id: \.self) { i in
-                    let span = CellSpan(col: i % layout.cols, row: i / layout.cols)
-                    let r = rect(span, in: bounds)
+                ForEach(layout.cells, id: \.self) { cell in
+                    let r = rect(CellRange(cell), in: bounds)
                     RoundedRectangle(cornerRadius: 5)
                         .strokeBorder(Color.primary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                         .frame(width: r.width, height: r.height)
                         .offset(x: r.minX, y: r.minY)
                 }
                 ForEach(Array(grouped.enumerated()), id: \.offset) { _, group in
-                    let r = rect(group.span, in: bounds)
+                    let r = rect(group.range, in: bounds)
                     AppTile(apps: group.items) { id in
                         layout.assignments.removeAll { $0.id == id }
                     }
@@ -179,19 +232,19 @@ private struct GridPreview: View {
     }
 
     /// Assignments sharing the same cells are shown stacked in one tile.
-    private var grouped: [(span: CellSpan, items: [Assignment])] {
-        var order: [CellSpan] = []
-        var map: [CellSpan: [Assignment]] = [:]
+    private var grouped: [(range: CellRange, items: [Assignment])] {
+        var order: [CellRange] = []
+        var map: [CellRange: [Assignment]] = [:]
         for a in layout.assignments {
-            if map[a.span] == nil { order.append(a.span) }
-            map[a.span, default: []].append(a)
+            if map[a.range] == nil { order.append(a.range) }
+            map[a.range, default: []].append(a)
         }
         return order.map { ($0, map[$0] ?? []) }
     }
 
     /// Cell rect in SwiftUI coordinates (origin top-left).
-    private func rect(_ span: CellSpan, in bounds: CGRect) -> CGRect {
-        let r = Geometry.rect(span: span, cols: layout.cols, rows: layout.rows, in: bounds, gap: 6)
+    private func rect(_ range: CellRange, in bounds: CGRect) -> CGRect {
+        let r = Geometry.rect(range, in: layout, frame: bounds, gap: 6)
         return CGRect(x: r.minX, y: bounds.height - r.maxY, width: r.width, height: r.height)
     }
 }

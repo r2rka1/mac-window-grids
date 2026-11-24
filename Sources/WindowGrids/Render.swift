@@ -4,21 +4,22 @@ import SwiftUI
 enum Render {
     static func demoStore() -> Store {
         let s = Store(persist: false)
-        func a(_ id: String, _ name: String, _ c: Int, _ r: Int, _ cs: Int = 1, _ rs: Int = 1) -> Assignment {
-            Assignment(bundleID: id, appName: name, span: CellSpan(col: c, row: r, colSpan: cs, rowSpan: rs))
+        func a(_ id: String, _ name: String, _ c: Int, _ r: Int) -> Assignment {
+            Assignment(bundleID: id, appName: name, range: CellRange(Cell(col: c, row: r)))
         }
         s.layouts = [
             Layout(
-                name: "Coding", cols: 3, rows: 2,
+                name: "Coding", columns: [Column(weight: 1.5, rows: 1), Column(weight: 1, rows: 3)],
                 assignments: [
-                    a("com.apple.dt.Xcode", "Xcode", 0, 0, 2, 2),
-                    a("com.apple.Terminal", "Terminal", 2, 0),
-                    a("com.apple.Safari", "Safari", 2, 1),
+                    a("com.apple.dt.Xcode", "Xcode", 0, 0),
+                    a("com.apple.Terminal", "Terminal", 1, 0),
+                    a("com.apple.Safari", "Safari", 1, 1),
+                    a("com.apple.Notes", "Notes", 1, 2),
                 ]),
             Layout(
-                name: "Writing", cols: 2, rows: 1,
+                name: "Writing", rows: [1, 1],
                 assignments: [a("com.apple.Notes", "Notes", 0, 0), a("com.apple.Safari", "Safari", 1, 0)]),
-            Layout(name: "Comms", cols: 2, rows: 2),
+            Layout(name: "Comms", rows: [2, 2]),
         ]
         s.activeID = s.layouts[0].id
         return s
@@ -29,12 +30,13 @@ enum Render {
         let controller = AppController(store: demoStore())
         controller.trusted = true
         let view = EditorView().environmentObject(controller).environmentObject(controller.store)
-            .frame(width: 820, height: 600)
+            .tint(Mascot.tint)
+            .frame(width: 820, height: 640)
             .background(Color(nsColor: .windowBackgroundColor))
         let host = NSHostingView(rootView: view)
         let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         host.appearance = appearance
-        host.frame = NSRect(x: 0, y: 0, width: 820, height: 600)
+        host.frame = NSRect(x: 0, y: 0, width: 820, height: 640)
         let window = NSWindow(contentRect: host.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = appearance
         window.contentView = host
@@ -51,11 +53,11 @@ enum Render {
         back.wantsLayer = true
         let gradient = CAGradientLayer()
         gradient.frame = back.bounds
-        gradient.colors = [NSColor.systemIndigo.cgColor, NSColor.systemTeal.cgColor]
+        gradient.colors = [NSColor(white: 0.32, alpha: 1).cgColor, NSColor(white: 0.18, alpha: 1).cgColor]
         back.layer?.addSublayer(gradient)
         let overlay = OverlayView(frame: back.bounds)
         overlay.layout = layout
-        overlay.selection = CellSpan(col: 2, row: 0, colSpan: 1, rowSpan: 2)
+        overlay.selection = CellRange(Cell(col: 1, row: 1))
         back.addSubview(overlay)
         let window = NSWindow(contentRect: back.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.contentView = back
