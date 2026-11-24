@@ -29,7 +29,12 @@ enum Render {
         _ = NSApplication.shared
         let controller = AppController(store: demoStore())
         controller.trusted = true
-        let view = EditorView().environmentObject(controller).environmentObject(controller.store)
+        let apps = [
+            ("com.apple.iCal", "Calendar"), ("com.apple.finder", "Finder"), ("com.apple.mail", "Mail"),
+            ("com.apple.Music", "Music"), ("com.apple.Notes", "Notes"), ("com.apple.Safari", "Safari"),
+            ("com.apple.Terminal", "Terminal"), ("com.apple.dt.Xcode", "Xcode"),
+        ].map { AppRef(bundleID: $0.0, name: $0.1) }
+        let view = EditorView(demoApps: apps).environmentObject(controller).environmentObject(controller.store)
             .tint(Mascot.tint)
             .frame(width: 820, height: 640)
             .background(Color(nsColor: .windowBackgroundColor))

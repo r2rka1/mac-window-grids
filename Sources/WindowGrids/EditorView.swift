@@ -1,10 +1,13 @@
 import ServiceManagement
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct EditorView: View {
     @EnvironmentObject var controller: AppController
     @EnvironmentObject var store: Store
     @State private var selected: UUID?
+    /// Fixed app list for rendering screenshots; nil means the apps really running.
+    var demoApps: [AppRef]? = nil
 
     private var currentID: UUID? {
         if let selected, store.layout(selected) != nil { return selected }
@@ -53,7 +56,6 @@ struct EditorView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { selected = l.id }
             }
-            Spacer()
             HStack {
                 Button {
                     selected = store.addLayout().id
@@ -66,6 +68,9 @@ struct EditorView: View {
                 } label: { Image(systemName: "minus") }
                 .disabled(store.layouts.count <= 1)
             }
+            .padding(.top, 6)
+            Divider().padding(.vertical, 8)
+            AppPalette(demoApps: demoApps)
         }
         .padding(10)
     }
@@ -108,8 +113,9 @@ private struct LayoutDetail: View {
             columnControls
 
             Text(
-                "Hold ⇧ Shift while dragging any window to drop it into a cell of the active layout. "
-                    + "Add ⌃ Control to stretch it over several cells. The app is remembered in that cell."
+                "Drag an app from the list on the left into a cell, or drag a tile to another cell. "
+                    + "On screen, hold ⇧ Shift while dragging any window to drop it into a cell of the active "
+                    + "layout; add ⌃ Control to stretch it over several cells."
             )
             .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
 
@@ -214,8 +220,7 @@ private struct GridPreview: View {
                 RoundedRectangle(cornerRadius: 8).fill(Color.primary.opacity(0.06))
                 ForEach(layout.cells, id: \.self) { cell in
                     let r = rect(CellRange(cell), in: bounds)
-                    RoundedRectangle(cornerRadius: 5)
-                        .strokeBorder(Color.primary.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    DropCell { items in drop(items, on: CellRange(cell)) }
                         .frame(width: r.width, height: r.height)
                         .offset(x: r.minX, y: r.minY)
                 }
@@ -224,11 +229,35 @@ private struct GridPreview: View {
                     AppTile(apps: group.items) { id in
                         layout.assignments.removeAll { $0.id == id }
                     }
+                    .dropDestination(for: String.self) { items, _ in drop(items, on: group.range) }
                     .frame(width: r.width, height: r.height)
                     .offset(x: r.minX, y: r.minY)
                 }
             }
         }
+    }
+
+    /// Handles a drop from the app list ("app:<bundle id>|<name>") or of an existing
+    /// tile ("move:<assignment id>").
+    private func drop(_ items: [String], on range: CellRange) -> Bool {
+        guard let item = items.first else { return false }
+        var l = layout
+        if item.hasPrefix(DragPayload.move), let id = UUID(uuidString: String(item.dropFirst(DragPayload.move.count))),
+            let i = l.assignments.firstIndex(where: { $0.id == id })
+        {
+            l.assignments[i].range = range
+        } else if item.hasPrefix(DragPayload.app) {
+            let parts = item.dropFirst(DragPayload.app.count).split(separator: "|", maxSplits: 1)
+            guard let bundleID = parts.first.map(String.init), !bundleID.isEmpty else { return false }
+            let name = parts.count > 1 ? String(parts[1]) : bundleID
+            guard !l.assignments.contains(where: { $0.bundleID == bundleID && $0.range == range })
+            else { return true }
+            l.assignments.append(Assignment(bundleID: bundleID, appName: name, range: range))
+        } else {
+            return false
+        }
+        layout = l
+        return true
     }
 
     /// Assignments sharing the same cells are shown stacked in one tile.
@@ -261,7 +290,7 @@ private struct AppTile: View {
                 VStack(spacing: 4) {
                     ForEach(apps) { a in
                         HStack(spacing: 5) {
-                            if let icon = Self.icon(a.bundleID) {
+                            if let icon = AppRef.icon(a.bundleID) {
                                 Image(nsImage: icon).resizable().frame(width: 20, height: 20)
                             }
                             Text(a.appName + (a.screen > 0 ? "  (display \(a.screen + 1))" : ""))
@@ -274,6 +303,7 @@ private struct AppTile: View {
                             .buttonStyle(.plain)
                             .help("Remove from this layout")
                         }
+                        .draggable(DragPayload.move + a.id.uuidString)
                     }
                 }
                 .padding(4)
@@ -286,9 +316,110 @@ private struct AppTile: View {
         return Color(hue: Double(h) / 360, saturation: 0.65, brightness: 0.8)
     }
 
-    private static func icon(_ bundleID: String) -> NSImage? {
+}
+
+enum DragPayload {
+    static let app = "app:"
+    static let move = "move:"
+}
+
+struct AppRef: Identifiable, Hashable {
+    let bundleID: String
+    let name: String
+    var id: String { bundleID }
+
+    static func icon(_ bundleID: String) -> NSImage? {
         NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID).map {
             NSWorkspace.shared.icon(forFile: $0.path)
+        }
+    }
+
+    static func running() -> [AppRef] {
+        let me = Bundle.main.bundleIdentifier
+        var seen = Set<String>()
+        return NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular }
+            .compactMap { app -> AppRef? in
+                guard let id = app.bundleIdentifier, id != me, seen.insert(id).inserted else { return nil }
+                return AppRef(bundleID: id, name: app.localizedName ?? id)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+}
+
+/// An empty grid cell: a dashed outline that lights up while something is dragged over it.
+private struct DropCell: View {
+    let onDrop: ([String]) -> Bool
+    @State private var targeted = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 5)
+            .fill(targeted ? Mascot.tint.opacity(0.3) : Color.primary.opacity(0.001))
+            .overlay(
+                RoundedRectangle(cornerRadius: 5)
+                    .strokeBorder(
+                        targeted ? Mascot.tint : Color.primary.opacity(0.25),
+                        style: StrokeStyle(lineWidth: targeted ? 2 : 1, dash: targeted ? [] : [4, 3]))
+            )
+            .dropDestination(for: String.self) { items, _ in onDrop(items) } isTargeted: { targeted = $0 }
+    }
+}
+
+/// Apps that can be dragged into a cell: everything running, plus any picked by hand.
+private struct AppPalette: View {
+    let demoApps: [AppRef]?
+    @State private var running: [AppRef] = []
+    @State private var extra: [AppRef] = []
+
+    private var apps: [AppRef] {
+        let base = demoApps ?? running
+        return base + extra.filter { e in !base.contains { $0.bundleID == e.bundleID } }
+    }
+
+    var body: some View {
+        let center = NSWorkspace.shared.notificationCenter
+        VStack(alignment: .leading, spacing: 2) {
+            Text("APPS").font(.caption.bold()).foregroundStyle(.secondary)
+            Text("Drag into a cell").font(.caption).foregroundStyle(.secondary).padding(.bottom, 4)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(apps) { app in
+                        HStack(spacing: 6) {
+                            if let icon = AppRef.icon(app.bundleID) {
+                                Image(nsImage: icon).resizable().frame(width: 18, height: 18)
+                            }
+                            Text(app.name).lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.vertical, 3).padding(.horizontal, 6)
+                        .contentShape(Rectangle())
+                        .draggable(DragPayload.app + app.bundleID + "|" + app.name)
+                    }
+                }
+            }
+            Button("Other app…", action: pick).controlSize(.small).padding(.top, 4)
+        }
+        .onAppear { running = AppRef.running() }
+        .onReceive(center.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in
+            running = AppRef.running()
+        }
+        .onReceive(center.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
+            running = AppRef.running()
+        }
+    }
+
+    /// Adds an app that is not running to the list.
+    private func pick() {
+        let panel = NSOpenPanel()
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.allowedContentTypes = [.application]
+        panel.allowsMultipleSelection = true
+        guard panel.runModal() == .OK else { return }
+        for url in panel.urls {
+            guard let id = Bundle(url: url)?.bundleIdentifier, !extra.contains(where: { $0.bundleID == id })
+            else { continue }
+            extra.append(AppRef(bundleID: id, name: FileManager.default.displayName(atPath: url.path)
+                .replacingOccurrences(of: ".app", with: "")))
         }
     }
 }
