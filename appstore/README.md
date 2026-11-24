@@ -36,7 +36,7 @@ Try the sandboxed build on this Mac first: `./scripts/build-appstore.sh --local 
 ## Listing
 
 - **Name:** Window Grids
-- **Subtitle:** Saved window layouts, one hotkey
+- **Subtitle:** Saved window layouts by hotkey
 - **Category:** Productivity
 - **Price:** Free
 - **Age rating:** 4+

@@ -68,6 +68,8 @@ fi
 TEAM_ID="$(sed -E 's/.*\(([A-Z0-9]+)\)$/\1/' <<<"$APP_IDENTITY")"
 
 cp "$PROFILE" "$APP/Contents/embedded.provisionprofile"
+# Downloaded profiles carry com.apple.quarantine, which App Store upload rejects.
+xattr -cr "$APP"
 $PB -c "Add :com.apple.application-identifier string $TEAM_ID.$BUNDLE_ID" \
     -c "Add :com.apple.developer.team-identifier string $TEAM_ID" "$ENT"
 codesign --force --options runtime --timestamp --sign "$APP_IDENTITY" --entitlements "$ENT" "$APP"
